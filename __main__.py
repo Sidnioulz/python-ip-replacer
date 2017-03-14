@@ -10,7 +10,8 @@ import random
 import shutil
 
 
-USAGE_STRING = 'Usage: __main__.py [--help] --input=<DIR> --output=<DIR>'
+USAGE_STRING = 'Usage: __main__.py [--help] --input=<DIR> --output=<DIR> ' \
+               '--exclude=<A,A>'
 
 ipRe = re.compile(r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b')
 ipMap = dict()
@@ -86,12 +87,14 @@ def main(argv):
 
     __opt_input = None
     __opt_output = None
+    __opt_excl = []
 
     # Parse command-line parameters
     try:
-        (opts, args) = getopt.getopt(argv, "hi:o:",
+        (opts, args) = getopt.getopt(argv, "hi:o:e:",
                                      ["input=",
                                       "output=",
+                                      "exclude=",
                                       "help="])
     except(getopt.GetoptError):
         print(USAGE_STRING, file=sys.stderr)
@@ -115,6 +118,12 @@ def main(argv):
                     print(USAGE_STRING)
                     sys.exit(2)
                 __opt_output = (arg[1:] if arg[0] == '=' else arg)
+            elif opt in ('-e', '--exclude'):
+                if not arg:
+                    print(USAGE_STRING)
+                    sys.exit(2)
+                arg = (arg[1:] if arg[0] == '=' else arg)
+                __opt_excl = arg.split(",")
 
     if not __opt_input:
         tprnt("Error: missing input directory.", file=sys.stderr)
@@ -128,11 +137,17 @@ def main(argv):
         
     nameMap[__opt_input] = __opt_output
 
-    # TODO: browse all folder
-    # TODO: for each file, collect IP in name, and in content
-    # TODO: make an IP map
-    # TODO: make a filename in->out map
-    # TODO: re.sub each file and write to out
+    # Add excluded ranges to ipMap, so they don't get translated.
+    if __opt_excl:
+        tprnt("Initialising excluded IP ranges...")
+    for a in __opt_excl:
+        for i in range(0, 256):
+            for j in range(0, 256):
+                for k in range(0, 256):
+                    ip = "%s.%d.%d.%d" % (a, i, j, k)
+                    ipMap[ip] = ip
+    if __opt_excl:
+        tprnt("Done.")
 
     # Browse input directory to map all IPs and file names.
     walkables = deque([__opt_input])
